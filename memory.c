@@ -1,5 +1,7 @@
 
 #include <stdlib.h>
+#include <assert.h>
+#include <stdbool.h>
 
 #include "memory.h"
 
@@ -12,7 +14,7 @@ typedef struct mem_node{
   void* loc;
   size_t size;
 
-  mem_node* next;
+  struct mem_node* next;
 }mem_node;
 
 typedef struct buffer{
@@ -52,7 +54,7 @@ static void node_invariant( mem_node* node, int* x ){
     assert( node->loc );
     assert( node->size > 0 && node->size < INIT_SIZE );
     *x += node->size;
-    node_invariant( node->next, x )
+    node_invariant( node->next, x );
   }
 #endif//NDEBUG
 }
@@ -74,16 +76,6 @@ static void manager_invariant( buffer* manager ){
  * File scope functions
  */
 
-static mem_node** tail( mem_node** n ){
-
-  mem_node** ret = n;
-  while( *ret != NULL ){
-    ret = &ret->next;
-  }
-
-  return ret;
-}
-
 static mem_node* alloc_node(){
 
   mem_node* ret = NULL;
@@ -97,13 +89,13 @@ static mem_node* alloc_node(){
     return ret;
   }
 
-  int i;
+  unsigned int i;
   for( i=0; i<num_buff && ret == NULL; ++i ){
 
     curr = manager[i];
     if( curr->free > 0 ){
 
-      ret = curr->buff[INIT_SIZE/4 - curr->free];
+      ret = &curr->buff[INIT_SIZE/4 - curr->free];
     }
   }
 
@@ -111,20 +103,19 @@ static mem_node* alloc_node(){
 
     manager = realloc( manager, num_mgr+1 * sizeof( unmanaged_buff* ) );
     if( !manager ){ exit(1); }
-    curr = malloc( sizeof( unamanged_buff ) +
+    curr = malloc( sizeof( unmanaged_buff ) +
                    INIT_SIZE/4 * sizeof( mem_node ) );
     if( !curr ){ exit(1); }
 
     manager[num_mgr] = curr;
 
-    curr->open = INIT_SIZE/4;
-    curr->recycle = NULL;
+    curr->free = INIT_SIZE/4;
     curr->buff = &curr[1];
 
     ++num_mgr;
   }
 
-  curr->open -= 1;
+  curr->free -= 1;
   return ret;
 }
 
@@ -140,8 +131,9 @@ void* alloc( size_t bytes ){
   void* ret = NULL;
 
   buffer* curr;
+  mem_node* prev = NULL;
   mem_node* node = NULL;
-  int i;
+  unsigned int i;
   for( i=0; i<num_buff && ret == NULL; ++i ){
 
     curr = memory[i];
@@ -222,9 +214,9 @@ void drop( void* loc ){
 
   buffer* curr;
   mem_node* node = NULL;
+  mem_node* prev = NULL;
 
-
-  int i;
+  unsigned int i;
   for( i=0; i<num_buff; ++i ){
 
     curr = memory[i];
@@ -259,7 +251,7 @@ void drop( void* loc ){
 
 void flush_memory(){
 
-  int i;
+  unsigned int i;
 
   for( i=0; i<num_buff; ++i ){
 
