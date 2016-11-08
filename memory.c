@@ -6,259 +6,270 @@
 #include "memory.h"
 
 /*
- * Types internal
+ *Internals
  */
 
-typedef struct mem_node{
+struct lmgr{
 
-  void* loc;
-  size_t size;
+  lval* reclaim;
+};
 
-  struct mem_node* next;
-}mem_node;
-
-typedef struct buffer{
-
-  size_t free;
-
-  mem_node* record;
-  mem_node* empty;
+struct strmgr{
+  unsigned int free;
+  unsigned int next;
   char* buff;
-} buffer;
+};
 
-typedef struct unmanaged_buff{
-
-  int free;
-
-  mem_node* buff;
-} unmanaged_buff;
+static unsigned int strbuffs = 0;
+static struct strmgr** strbuff = NULL;
+static unsigned int lval_managers = 0;
+static struct lmgr** lval_manager = NULL;
 
 /*
- * File scope variables
+ *Public Interface
  */
 
-static unsigned int num_buff = 0;
-static buffer** memory = NULL;
-static unsigned int num_mgr = 0;
-static unmanaged_buff** manager = NULL;
-static mem_node* recycle = NULL;
-
-/*
- * Invariance
+/**
+ *List Manipulation
  */
 
-static void node_invariant( mem_node* node, int* x ){
-#ifndef NDEBUG
-  if( node != NULL ){
+lval* lval_pop( lval** node ){
 
-    assert( node->loc );
-    assert( node->size > 0 && node->size < INIT_SIZE );
-    *x += node->size;
-    node_invariant( node->next, x );
+  if( *node == NULL ){ return NULL; }
+  lval* ret = *node;
+  *node = (*node)->next;
+  ret->next = NULL;
+  return ret;
+}
+void lval_push( lval** node, lval* new ){
+
+  assert( node != NULL );
+  assert( new != NULL);
+  new->next = *node;
+  *node = new;
+}
+
+/**
+ *Memory Operations
+ */
+
+lval* lalloc( ){
+
+  lval* ret;
+  unsigned int i;
+  for( i = 0; i < lval_managers && ret == NULL; ++i ){
+
+    ret = lval_pop( &(lval_manager[i]->reclaim) );
   }
-#endif//NDEBUG
-}
+  if( ret == NULL ){
 
-static void manager_invariant( buffer* manager ){
-#ifndef NDEBUG
-  assert( manager );
-  assert( manager->record || manager->empty );
-  assert( manager->buff == manager );
-  int x = 0;
-  node_invariant( manager->record, &x );
-  node_invariant( manager->empty, &x );
-  assert( x < INIT_SIZE );
-
-#endif//NDEBUG
-}
-
-/*
- * File scope functions
- */
-
-static mem_node* alloc_node(){
-
-  mem_node* ret = NULL;
-  unmanaged_buff *curr = NULL;
-
-  if( recycle != NULL ){
-
-    ret = recycle;
-    recycle = ret->next;
+    //new manager
+    lval_manager = realloc( lval_manager, sizeof( struct lmgr* ) *
+                             ( lval_managers + 1 ) );
+    lval_manager[i] = malloc( sizeof( lval ) * INIT_SIZE +
+                              sizeof(struct lmgr ) );
+    ret = (lval*)&lval_manager[i][1];
+    ret->tag = LVAL_MGR;
+    ret->num = INIT_SIZE;
     ret->next = NULL;
-    return ret;
+    ++ lval_managers;
   }
 
-  unsigned int i;
-  for( i=0; i<num_buff && ret == NULL; ++i ){
-
-    curr = manager[i];
-    if( curr->free > 0 ){
-
-      ret = &curr->buff[INIT_SIZE/4 - curr->free];
-    }
+  assert( ret->tag == LVAL_MGR );
+  if( ret->num > 1 ){
+    lval* new_head = &ret[1];
+    new_head->tag = LVAL_MGR;
+    new_head->num = ret->num - 1;
+    lval_push( &lval_manager[i]->reclaim, new_head );
   }
 
-  if( ret == NULL ){
-
-    manager = realloc( manager, num_mgr+1 * sizeof( unmanaged_buff* ) );
-    if( !manager ){ exit(1); }
-    curr = malloc( sizeof( unmanaged_buff ) +
-                   INIT_SIZE/4 * sizeof( mem_node ) );
-    if( !curr ){ exit(1); }
-
-    manager[num_mgr] = curr;
-
-    curr->free = INIT_SIZE/4;
-    curr->buff = &curr[1];
-
-    ++num_mgr;
-  }
-
-  curr->free -= 1;
+  ret->num = 0;
+  ret->str = NULL;
+  ret->asoc = NULL;
+  ret->next = NULL;
+  ret->run = NULL;
+  ret->tag = LVAL_NIL;
   return ret;
 }
 
-/*
- * Public scope
- */
+lval* stralloc( size_t bytes ){
 
-void* alloc( size_t bytes ){
-
-  assert( bytes > 0 );
-  assert( bytes < INIT_SIZE - sizeof( buffer ) /*increase INIT_SIZE*/);
-
-  void* ret = NULL;
-
-  buffer* curr;
-  mem_node* prev = NULL;
-  mem_node* node = NULL;
+  lval* ret = lalloc();
   unsigned int i;
-  for( i=0; i<num_buff && ret == NULL; ++i ){
+  struct strmgr* curr = NULL;
 
-    curr = memory[i];
+  for( i = 0; i < strbuffs && ret->str == NULL; ++i ){
 
-    if( curr->free > bytes ){
+    curr = strbuff[i];
+    if( ( ( INIT_CHAR - 1 ) - curr->next ) > bytes ){
+      ret->str = &curr->buff[curr->next];
+    }
+  }
 
-      node = curr->empty;
-      prev = NULL;
-      while( node != NULL ){
+  if( ret->str == NULL ){
 
-        if( node->size == bytes ){
+    strbuff = realloc( strbuff, sizeof(struct strmgr)*( strbuffs + 1 ) );
+    curr = strbuff[i];
+    curr->free = 0;
+    curr->next = 0;
+    curr->buff = malloc( INIT_CHAR * sizeof( char ) );
+    strbuffs ++;
+    ret->str = &curr->buff[curr->next];
+  }
 
-          ret = node->loc;
+  assert( curr );
+  assert( ret );
+  assert( ret->str );
 
-          if( prev == NULL ){
+  ret->tag = LVAL_SYM;
+  ret->num = bytes;
 
-            curr->empty = node->next;
-          }else{
+  curr->next += bytes;
+  return ret;
+}
 
-            prev->next = node->next;
-          }
+lval* lval_num( long x ){
 
-          node->next = curr->record;//PUSH
-          curr->record = node;
+  lval* ret = lalloc();
+  ret->tag = LVAL_NUM;
+  ret->num = x;
+  return ret;
+}
 
-          return ret;
-        }else if( node->next == NULL && node->size > bytes ){
+lval* lval_err( char* msg ){
 
-          ret = node->loc;
-          break;
-        }else{
+  int len = strlen( msg ) + 1;
+  lval* ret = stralloc(len);
+  ret->tag = LVAL_ERR;
+  strncpy( ret->str, msg, len );
+  return ret;
+}
 
-          prev = node;
-          node = node->next;
+lval* lval_sym( char* contents ){
+
+  int len = strlen( contents ) + 1;
+  lval* ret = stralloc( len );
+  ret->tag = LVAL_SYM;
+  strncpy( ret->str, contents, len );
+  ret->next = NULL;
+  return ret;
+}
+
+lval* lval_sxpr( ){
+
+  lval* ret = lalloc();
+  ret->tag = LVAL_SXPR;
+  ret->num = 0;
+  ret->next = NULL;
+  ret->asoc = NULL;
+}
+lval* lval_qxpr( ){
+
+  lval* ret = lalloc();
+  ret->tag = LVAL_QXPR;
+  ret->num = 0;
+  ret->next = NULL;
+  ret->asoc = NULL;
+}
+
+void ldrop( lval* ptr ){
+
+  assert( ptr );
+  assert( ptr->tag != LVAL_MGR );
+
+  if( ptr->next != NULL ){
+    ldrop( ptr->next );
+  }
+  if( ptr->asoc != NULL ){
+    ldrop( ptr->asoc );
+  }
+
+  unsigned int i;
+  if( ptr->tag == LVAL_SYM || ptr->tag == LVAL_FN ||
+      ptr->tag == LVAL_BUILTIN || prt_tag->err ){
+    for( i = 0; i < strbuffs; ++i ){
+      if( ( strbuff[i]->buff ) < ptr->str &&
+          ( strbuff[i]->buff + INIT_CHAR ) > ptr->str ){
+        strbuff[i]->free += ptr->num;
+
+        if( strbuff[i]->free == strbuff[i]->next ){
+          //space reclaim, very weak at the moment
+          strbuff[i]->free = 0;
+          strbuff[i]->next = 0;
         }
+        break;
       }
     }
   }
 
-  if( ret == NULL ){
+  ptr->tag = LVAL_MGR;
+  ptr->str = NULL;
+  ptr->next = NULL;
+  ptr->fun = NULL;
+  ptr->asoc = NULL;
+  ptr->num = 1;
 
-    memory = realloc( memory, num_buff+1 * sizeof( buffer* ) );
-    if( !memory ){ exit(1); }
-    curr = malloc( INIT_SIZE );
-    if( !curr ){ exit(1); }
-
-    memory[num_buff] = curr;
-
-    node = alloc_node();
-    node->loc = &curr[1];
-    node->size = INIT_SIZE - sizeof( buffer );
-    node->next = NULL;
-
-    curr->empty = node;
-
-    ret = node->loc;
-
-    ++num_buff;
-  }
-
-  prev = node;
-  node = alloc_node();
-
-  node->loc = prev->loc;
-  node->size = bytes;
-  node->next = curr->record; //PUSH
-  curr->record = node;
-
-  prev->size -= bytes;
-  prev->loc += bytes;
-
-  return ret;
-}
-
-void drop( void* loc ){
-
-  assert( loc );
-
-  buffer* curr;
-  mem_node* node = NULL;
-  mem_node* prev = NULL;
-
-  unsigned int i;
-  for( i=0; i<num_buff; ++i ){
-
-    curr = memory[i];
-
-    if( curr + INIT_SIZE > loc && loc > curr ){
-
-      node = curr->record;
-      while( node!=NULL ){
-
-        if( node->loc == loc ){
-
-          if( prev == NULL ){
-            curr->record = node->next;
-          }else{
-            prev->next = node->next;
-          }
-
-          node->next = curr->empty;//PUSH
-          curr->empty = node;
-          return;
-        }
-        prev = node;
-        node = node->next;
-      }
+  for( i = 0; i < lval_managers; ++i ){
+    if( (lval*)( lval_manager[i] + 1 ) < ptr &&
+        (lval*)( lval_manager[i] + 1 ) + INIT_SIZE > ptr ){
+      lval_push( &lval_manager[i]->reclaim, ptr );
+      return;
     }
   }
 
-  assert( false /*No record of that pointer being allocated
-                 *You're either trying to drop a dropped pointer
-                 *or fed an invalid pointer*/);
+  assert( false /*Where did you get that pointer? Not from here*/);
 }
 
-void flush_memory(){
+void add_builtin( lenv* env, const char* sym, lbuitin* function ){
+
+  lval* symbol = search_env( env, sym );
+  if( symbol->tag != LVAL_ERR ){
+    if( symbol->tag == LVAL_FN ){
+
+      ldrop( symbol->asoc );
+      symbol->asoc = NULL;
+    }
+
+  }else{
+
+    size_t len = strlen( sym ) + 1;
+    ldrop( symbol );
+    symbol = stralloc( len );
+    strncpy( symbol->str, len, sym );
+  }
+
+  symbol->tag = LVAL_BUILTIN;
+  symbol->fun = function;
+
+  lval_push( &env->data, symbol );
+}
+
+lval* search_env( lenv* env, const char* sym ){
+
+  lval* curr = env->data;
+  lval* retval = NULL;
+
+  while( curr != NULL ){
+
+    if( strcmp( curr->str, sym ) ){
+      return curr;
+    }
+    curr = curr->next;
+  }
+  char err[256];
+  sprintf( "Symbol \"%s\" not bound in this environment", sym );
+  return lval_err( err );
+}
+
+void lval_cleanup(){
 
   unsigned int i;
+  for( i = 0; i < lval_managers; ++i ){
 
-  for( i=0; i<num_buff; ++i ){
-
-    free( memory[i] );
+    free( lval_manager[i] );
+    lval_manager[i] = NULL;
   }
-  for( i=0; i<num_mgr; ++i ){
-
-    free( manager[i] );
-  }
+  free( lval_manager );
+  lval_manager = NULL;
+  lval_managers = 0;
 }
