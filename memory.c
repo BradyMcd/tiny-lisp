@@ -1,7 +1,8 @@
 
-#include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "memory.h"
 
@@ -87,7 +88,7 @@ lval* lalloc( ){
   ret->str = NULL;
   ret->asoc = NULL;
   ret->next = NULL;
-  ret->run = NULL;
+  ret->fun = NULL;
   ret->tag = LVAL_NIL;
   return ret;
 }
@@ -162,6 +163,7 @@ lval* lval_sxpr( ){
   ret->num = 0;
   ret->next = NULL;
   ret->asoc = NULL;
+  return ret;
 }
 lval* lval_qxpr( ){
 
@@ -170,6 +172,7 @@ lval* lval_qxpr( ){
   ret->num = 0;
   ret->next = NULL;
   ret->asoc = NULL;
+  return ret;
 }
 
 void ldrop( lval* ptr ){
@@ -186,7 +189,7 @@ void ldrop( lval* ptr ){
 
   unsigned int i;
   if( ptr->tag == LVAL_SYM || ptr->tag == LVAL_FN ||
-      ptr->tag == LVAL_BUILTIN || prt_tag->err ){
+      ptr->tag == LVAL_BUILTIN || ptr->tag == LVAL_ERR ){
     for( i = 0; i < strbuffs; ++i ){
       if( ( strbuff[i]->buff ) < ptr->str &&
           ( strbuff[i]->buff + INIT_CHAR ) > ptr->str ){
@@ -220,7 +223,7 @@ void ldrop( lval* ptr ){
   assert( false /*Where did you get that pointer? Not from here*/);
 }
 
-void add_builtin( lenv* env, const char* sym, lbuitin* function ){
+void add_builtin( lenv* env, const char* sym, lbuiltin* function ){
 
   lval* symbol = search_env( env, sym );
   if( symbol->tag != LVAL_ERR ){
@@ -235,7 +238,7 @@ void add_builtin( lenv* env, const char* sym, lbuitin* function ){
     size_t len = strlen( sym ) + 1;
     ldrop( symbol );
     symbol = stralloc( len );
-    strncpy( symbol->str, len, sym );
+    strncpy( symbol->str, sym, len );
   }
 
   symbol->tag = LVAL_BUILTIN;
@@ -247,7 +250,6 @@ void add_builtin( lenv* env, const char* sym, lbuitin* function ){
 lval* search_env( lenv* env, const char* sym ){
 
   lval* curr = env->data;
-  lval* retval = NULL;
 
   while( curr != NULL ){
 
@@ -257,7 +259,7 @@ lval* search_env( lenv* env, const char* sym ){
     curr = curr->next;
   }
   char err[256];
-  sprintf( "Symbol \"%s\" not bound in this environment", sym );
+  sprintf( err, "Symbol \"%s\" not bound in this environment", sym );
   return lval_err( err );
 }
 

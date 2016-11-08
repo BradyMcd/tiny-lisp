@@ -8,7 +8,7 @@
 #define INIT_CHAR 8192
 
 enum TAG{
-  LVAL_NIL;
+  LVAL_NIL,
   LVAL_MGR,
   LVAL_ERR,
   LVAL_NUM,
