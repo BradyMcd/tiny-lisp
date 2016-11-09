@@ -35,12 +35,13 @@
 struct lmgr{
 
   lval* reclaim;
+  lval buffer[];
 };
 
 struct strmgr{
   unsigned int free;
   unsigned int next;
-  char* buff;
+  char buff[];
 };
 
 static unsigned int strbuffs = 0;
@@ -78,23 +79,28 @@ void lval_push( lval** node, lval* new ){
 
 lval* lalloc( ){
 
-  lval* ret;
+  lval* ret = NULL;
+  struct lmgr* curr = NULL;
   unsigned int i;
   for( i = 0; i < lval_managers && ret == NULL; ++i ){
 
-    ret = lval_pop( &(lval_manager[i]->reclaim) );
+    curr = lval_manager[i];
+    ret = lval_pop( &(curr->reclaim) );
   }
   if( ret == NULL ){
 
     //new manager
     lval_manager = realloc( lval_manager, sizeof( struct lmgr* ) *
                              ( lval_managers + 1 ) );
-    lval_manager[i] = malloc( sizeof( lval ) * INIT_SIZE +
-                              sizeof(struct lmgr ) );
-    ret = (lval*)&lval_manager[i][1];
+    curr = malloc( sizeof( struct lmgr ) +
+                   sizeof( lval ) * INIT_SIZE );
+    curr->reclaim = NULL;
+
+    ret = &curr->buffer[0];
     ret->tag = LVAL_MGR;
     ret->num = INIT_SIZE;
     ret->next = NULL;
+    lval_manager[lval_managers] = curr;
     ++ lval_managers;
   }
 
@@ -103,7 +109,8 @@ lval* lalloc( ){
     lval* new_head = &ret[1];
     new_head->tag = LVAL_MGR;
     new_head->num = ret->num - 1;
-    lval_push( &lval_manager[i]->reclaim, new_head );
+    new_head->next = NULL;
+    lval_push( &( curr->reclaim ), new_head );
   }
 
   ret->num = 0;
@@ -131,11 +138,11 @@ lval* stralloc( size_t bytes ){
 
   if( ret->str == NULL ){
 
-    strbuff = realloc( strbuff, sizeof(struct strmgr)*( strbuffs + 1 ) );
-    curr = strbuff[i];
+    strbuff = realloc( strbuff, sizeof( struct strmgr* )*( strbuffs + 1 ) );
+    curr = malloc( sizeof( struct strmgr ) + INIT_CHAR );
     curr->free = 0;
     curr->next = 0;
-    curr->buff = malloc( INIT_CHAR * sizeof( char ) );
+    strbuff[strbuffs] = curr;
     strbuffs ++;
     ret->str = &curr->buff[curr->next];
   }
@@ -174,7 +181,6 @@ lval* lval_sym( char* contents ){
   lval* ret = stralloc( len );
   ret->tag = LVAL_SYM;
   strncpy( ret->str, contents, len );
-  ret->next = NULL;
   return ret;
 }
 
@@ -182,18 +188,12 @@ lval* lval_sxpr( ){
 
   lval* ret = lalloc();
   ret->tag = LVAL_SXPR;
-  ret->num = 0;
-  ret->next = NULL;
-  ret->asoc = NULL;
   return ret;
 }
 lval* lval_qxpr( ){
 
   lval* ret = lalloc();
   ret->tag = LVAL_QXPR;
-  ret->num = 0;
-  ret->next = NULL;
-  ret->asoc = NULL;
   return ret;
 }
 
@@ -235,8 +235,8 @@ void ldrop( lval* ptr ){
   ptr->num = 1;
 
   for( i = 0; i < lval_managers; ++i ){
-    if( (lval*)( lval_manager[i] + 1 ) < ptr &&
-        (lval*)( lval_manager[i] + 1 ) + INIT_SIZE > ptr ){
+    if( &lval_manager[i]->buffer[0] <= ptr &&
+        &lval_manager[i]->buffer[INIT_SIZE - 1] > ptr ){
       lval_push( &lval_manager[i]->reclaim, ptr );
       return;
     }
