@@ -24,43 +24,44 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <mpc/mpc.h>
 
 #include <parser.h>
 #include <memory.h>
 
-static mpc_parser_t* Num;
-static mpc_parser_t* Sym;
-static mpc_parser_t* Expr;
-static mpc_parser_t* Sxpr;
-static mpc_parser_t* Qxpr;
-static mpc_parser_t* Lisp;
+static mpc_parser_t *Num;
+static mpc_parser_t *Sym;
+static mpc_parser_t *Expr;
+static mpc_parser_t *Sxpr;
+static mpc_parser_t *Qxpr;
+static mpc_parser_t *Lisp;
 
 /*
  * Read step
  */
-lval* _lval_read_num( mpc_ast_t* node ){
+lval *_lval_read_num( mpc_ast_t *node ){
 
   errno = 0;
   long num = strtol( node->contents, NULL, 0 );
   if( errno == 0 ){
     return lval_num( num );
   }else if( errno == ERANGE ){
-    char* err = "Number out of range";
+    char *err = "Number out of range";
     return lval_err( err );
   }else if( errno == EINVAL ){
-    char* err = "Invalid digits found";
+    char *err = "Invalid digits found";
     return lval_err( err );
   }
 
   /*UNREACHABLE*/
-  char* err = "Unknown error, invalid code path reached"
+  char *err = "Unknown error, invalid code path reached"
     " while converting number";
   return lval_err( err );
 }
 
-void _lval_add( lval** node, lval* new ){
+void _lval_add( lval* *node, lval *new ){
 
   if( *node == NULL ){
 
@@ -71,12 +72,12 @@ void _lval_add( lval** node, lval* new ){
   _lval_add( &((*node)->next), new );
 }
 
-lval* _read_ast( mpc_ast_t* node ){
+lval *_read_ast( mpc_ast_t *node ){
 
   if( strstr( node->tag, "num" ) ){ return _lval_read_num( node ); }
   if( strstr( node->tag, "sym" ) ){ return lval_sym( node->contents ); }
 
-  lval* ret = NULL;
+  lval *ret = NULL;
   int i;
   if( strcmp( node->tag, ">" /*mpc marks root with ">"*/ ) == 0 ||
       strstr( node->tag, "sxpr" ) ){
@@ -108,58 +109,117 @@ lval* _read_ast( mpc_ast_t* node ){
  *Eval step
  */
 
-void lval_print( lval* node );
-void _lval_recurse_print( lval* node ){
 
-  if( node != NULL ){
-    printf( " " );
-    lval_print( node );
-    _lval_recurse_print( node->next );
+/*
+ *Printing Lisp values
+ */
+#define WRITE_BUFFER( LOC, LEFT, SRC )   \
+  { int _strlen = strlen( SRC );        \
+    if( LEFT < _strlen ){               \
+      strncpy( LOC, SRC, _strlen );     \
+      LOC += _strlen;                   \
+      LEFT -= _strlen;                  \
+    }else{ return 1; }}
+
+int _lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node ){
+
+  char buff[128];
+  char *loc = dest;
+  int left = n;
+
+  if( od != NULL ){
+    WRITE_BUFFER( loc, left, od )
   }
-}
-
-void lval_print( lval* node ){
 
   switch( node->tag ){
   case LVAL_SXPR:
-    printf( "(" );
-    _lval_recurse_print( node->asoc );
-    printf( " )" );
+    _lval_sprint( loc, left, "( ", " )", node->asoc );
     break;
   case LVAL_QXPR:
-    printf( "{" );
-    _lval_recurse_print( node->asoc );
-    printf( " }" );
+    _lval_sprint( loc, left, "{ ", "}", node->asoc );
     break;
   case LVAL_NUM:
-    printf( "%li", node->num );
+    sprintf( buff, "%li ", node->num );
+    WRITE_BUFFER( loc, left, buff )
     break;
   case LVAL_SYM:
-    printf( "%s", node->str );
+    WRITE_BUFFER( loc, left, node->str )
+    WRITE_BUFFER( loc, left, " " )
     break;
   case LVAL_ERR:
-    printf( "Error: %s", node->str );
+    /*This is technically a much different code path,
+     *I'll probably split these print functions in 3 when environment works*/
+    WRITE_BUFFER( loc, left, node->str )
     break;
   default:
-    printf( "Somehow, something went wrong. Tag: %i", node->tag );
-    /*THESE DON'T EXIST JUST YET
-  case LVAL_BUILTIN:
-    printf( "<Builtin Function>" );
+    fprintf( stderr, "Somehow, something went wrong. Tag: %i", node->tag );
+    return 1;
     break;
-  case LVAL_FN:
-    printf( "<Function>" );
+  }
+
+  if( cd != NULL ){
+    WRITE_BUFFER( loc, left, cd )
+  }
+
+  if( node->next != NULL )
+    return lval_sprint( loc, left, NULL, NULL, node->next );
+
+  return 0;
+}
+/*NOTE: If this function returns 1 it has possibly left the dest string in an
+  invalid state*/
+int lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node){
+  memset( dest, 0, n );
+  return _lval_sprint( dest, n, od, cd, node );
+}
+
+void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
+
+  if( od != NULL ){
+    fputs( od, stream );
+  }
+
+  switch( node->tag ){
+  case LVAL_SXPR:
+    _lval_fprint( stream, "( ", ")", node->asoc );
     break;
-  case LVAL_VAR:
-    printf( "%s = %li", node->str, node->num );
+  case LVAL_QXPR:
+    _lval_fprint( stream, "{ ", "}", node->asoc );
     break;
-    */
+  case LVAL_NUM:
+    fprintf( stream, "%li ", node->num );
+    break;
+  case LVAL_SYM:
+    fprintf( stream, "%s ", node->str );
+    break;
+  case LVAL_ERR:
+    /*Again, in states where an error is present things should be very
+      different. This wants a rewrite after environment and error handling*/
+    fprintf( stream, "Error: %s", node->str );
+    break;
+  default:
+    fprintf( stderr, "Somehow, something went wrong. Tag: %i", node->tag );
+  }
+
+  if( node->next != NULL )
+    _lval_fprint( stream, NULL, NULL, node->next );
+
+  if( cd != NULL )
+    fputs( cd, stream );
+}
+void lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
+  if( node->tag == LVAL_SXPR ){
+    _lval_fprint( stream, od, cd, node->asoc );
+  }else{
+    //This is almost definitely the error path
+    _lval_fprint( stream, od, cd, node );
   }
 }
 
-lval* read_string( const char* source, const char* string ){
+lval *read_string( const char *source, const char *string ){
 
   mpc_result_t result;
-  lval* retval;
+  lval *retval;
 
   if( mpc_parse( source, string, Lisp, &result ) ){
 
@@ -168,13 +228,13 @@ lval* read_string( const char* source, const char* string ){
   }else{
     mpc_err_print( result.error );
     mpc_err_delete( result.error );
-    char* err = "Parser reported an error";
+    char *err = "Parser reported an error";
     retval = lval_err( err );
   }
   return retval;
 }
 
-void lval_drop( lval* ptr ){
+void lval_drop( lval *ptr ){
 
   ldrop( ptr );
 }

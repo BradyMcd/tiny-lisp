@@ -29,7 +29,7 @@
 int test_string( char* str, bool expect ){
   printf("Reading: %s\n", str);
   lval* _rv = read_string( "Internal", str );
-  lval_print( _rv );
+  lval_fprint( stdout, NULL, NULL, _rv );
   printf("\nExpected %s.\n", expect?"matching output":"an error");
 
   lval_drop( _rv );
@@ -44,7 +44,7 @@ int main( ){
   test_string( "{ + 2 3 }", true );
 
   test_string( "{ a abc ss ", false );
-  test_string( "ab 2 2 3 { some a b c }", false );
+  test_string( "ab 2 2 3 { some a b c }", true );
   test_string( "- 1 2 )", false );
 
   parser_mem_cleanup();
