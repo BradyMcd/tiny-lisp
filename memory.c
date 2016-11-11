@@ -34,7 +34,7 @@
 
 struct lmgr{
 
-  lval* reclaim;
+  lval *reclaim;
   lval buffer[];
 };
 
@@ -45,9 +45,9 @@ struct strmgr{
 };
 
 static unsigned int strbuffs = 0;
-static struct strmgr** strbuff = NULL;
+static struct strmgr **strbuff = NULL;
 static unsigned int lval_managers = 0;
-static struct lmgr** lval_manager = NULL;
+static struct lmgr **lval_manager = NULL;
 
 /*
  *Public Interface
@@ -57,15 +57,15 @@ static struct lmgr** lval_manager = NULL;
  *List Manipulation
  */
 
-lval* lval_pop( lval** node ){
+lval *lval_pop( lval **node ){
 
   if( *node == NULL ){ return NULL; }
-  lval* ret = *node;
+  lval *ret = *node;
   *node = (*node)->next;
   ret->next = NULL;
   return ret;
 }
-void lval_push( lval** node, lval* new ){
+void lval_push( lval **node, lval *new ){
 
   assert( node != NULL );
   assert( new != NULL);
@@ -77,10 +77,10 @@ void lval_push( lval** node, lval* new ){
  *Memory Operations
  */
 
-lval* lalloc( ){
+lval *lalloc( ){
 
-  lval* ret = NULL;
-  struct lmgr* curr = NULL;
+  lval *ret = NULL;
+  struct lmgr *curr = NULL;
   unsigned int i;
   for( i = 0; i < lval_managers && ret == NULL; ++i ){
 
@@ -106,7 +106,7 @@ lval* lalloc( ){
 
   assert( ret->tag == LVAL_MGR );
   if( ret->num > 1 ){
-    lval* new_head = &ret[1];
+    lval *new_head = &ret[1];
     new_head->tag = LVAL_MGR;
     new_head->num = ret->num - 1;
     new_head->next = NULL;
@@ -122,11 +122,11 @@ lval* lalloc( ){
   return ret;
 }
 
-lval* stralloc( size_t bytes ){
+lval *stralloc( size_t bytes ){
 
-  lval* ret = lalloc();
+  lval *ret = lalloc();
   unsigned int i;
-  struct strmgr* curr = NULL;
+  struct strmgr *curr = NULL;
 
   for( i = 0; i < strbuffs && ret->str == NULL; ++i ){
 
@@ -158,46 +158,46 @@ lval* stralloc( size_t bytes ){
   return ret;
 }
 
-lval* lval_num( long x ){
+lval *lval_num( long x ){
 
-  lval* ret = lalloc();
+  lval *ret = lalloc();
   ret->tag = LVAL_NUM;
   ret->num = x;
   return ret;
 }
 
-lval* lval_err( char* msg ){
+lval *lval_err( char *msg ){
 
   int len = strlen( msg ) + 1;
-  lval* ret = stralloc(len);
+  lval *ret = stralloc(len);
   ret->tag = LVAL_ERR;
   strncpy( ret->str, msg, len );
   return ret;
 }
 
-lval* lval_sym( char* contents ){
+lval *lval_sym( char *contents ){
 
   int len = strlen( contents ) + 1;
-  lval* ret = stralloc( len );
+  lval *ret = stralloc( len );
   ret->tag = LVAL_SYM;
   strncpy( ret->str, contents, len );
   return ret;
 }
 
-lval* lval_sxpr( ){
+lval *lval_sxpr( ){
 
-  lval* ret = lalloc();
+  lval *ret = lalloc();
   ret->tag = LVAL_SXPR;
   return ret;
 }
-lval* lval_qxpr( ){
+lval *lval_qxpr( ){
 
-  lval* ret = lalloc();
+  lval *ret = lalloc();
   ret->tag = LVAL_QXPR;
   return ret;
 }
 
-void ldrop( lval* ptr ){
+void ldrop( lval *ptr ){
 
   assert( ptr );
   assert( ptr->tag != LVAL_MGR );
@@ -245,9 +245,9 @@ void ldrop( lval* ptr ){
   assert( false /*Where did you get that pointer? Not from here*/);
 }
 
-void add_builtin( lenv* env, const char* sym, lbuiltin* function ){
+void add_builtin( lenv *env, const char *sym, lbuiltin *function ){
 
-  lval* symbol = search_env( env, sym );
+  lval *symbol = search_env( env, sym );
   if( symbol->tag != LVAL_ERR ){
     if( symbol->tag == LVAL_FN ){
 
@@ -269,9 +269,9 @@ void add_builtin( lenv* env, const char* sym, lbuiltin* function ){
   lval_push( &env->data, symbol );
 }
 
-lval* search_env( lenv* env, const char* sym ){
+lval *search_env( lenv *env, const char *sym ){
 
-  lval* curr = env->data;
+  lval *curr = env->data;
 
   while( curr != NULL ){
 
