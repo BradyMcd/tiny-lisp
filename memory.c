@@ -51,11 +51,6 @@ static unsigned int lval_managers = 0;
 static struct lmgr **lval_manager = NULL;
 
 /**
- *List Manipulation
- */
-
-
-/**
  *Memory Operations
  */
 
