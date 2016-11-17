@@ -28,8 +28,9 @@
 
 #include <mpc/mpc.h>
 
-#include <parser.h>
 #include <memory.h>
+#include <lval.h>
+#include <parser.h>
 
 static mpc_parser_t *Num;
 static mpc_parser_t *Sym;
@@ -59,17 +60,6 @@ lval *_lval_read_num( mpc_ast_t *node ){
   char *err = "Unknown error, invalid code path reached"
     " while converting number";
   return lval_err( err );
-}
-
-void _lval_add( lval* *node, lval *new ){
-
-  if( *node == NULL ){
-
-    *node = new;
-    return;
-  }
-
-  _lval_add( &((*node)->next), new );
 }
 
 lval *_read_ast( mpc_ast_t *node ){

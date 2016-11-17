@@ -4,9 +4,7 @@
 
 #include <stddef.h>
 
-typedef struct lval lval;
-typedef struct lenv lenv;
-typedef lval*(*lbuiltin)(lenv*, lval*);
+#include <lval_type.h>
 
 int lval_sprint( char*, size_t, char*, char*, lval* );
 void lval_fprint( FILE*, char*, char*, lval* );
@@ -19,6 +17,5 @@ void parser_init();
 
 void parser_cleanup();
 void parser_mem_cleanup();
-
 
 #endif//_PARSER_H

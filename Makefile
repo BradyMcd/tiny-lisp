@@ -1,6 +1,6 @@
 CC = clang
 FLAGS = -Wall -Wextra -g
-OBJECTS = memory.o parser.o
+OBJECTS = memory.o parser.o lval.o
 SRC = $(OBJECTS:.o=.c)
 CDIR = $(shell pwd)
 INCLUDE = -I$(CDIR)
@@ -15,7 +15,7 @@ $(CDIR)/bin/:
 bin/read_test: $(CDIR)/tests/read_test.c $(OBJECTS) $(DEP)
 	$(CC) $(FLAGS) $(OBJECTS) $(DEP) $< -o $@ $(INCLUDE)
 
-tests: $(CDIR)/bin/ bin/read_test 
+tests: $(CDIR)/bin/ bin/read_test
 
 $(DEP):
 	$(CC) $(FLAGS) -c mpc/mpc.c -o $@

@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <lval.h>
 #include <memory.h>
 
 /*
@@ -48,10 +49,6 @@ static unsigned int strbuffs = 0;
 static struct strmgr **strbuff = NULL;
 static unsigned int lval_managers = 0;
 static struct lmgr **lval_manager = NULL;
-
-/*
- *Public Interface
- */
 
 /**
  *List Manipulation
@@ -158,44 +155,6 @@ lval *stralloc( size_t bytes ){
   return ret;
 }
 
-lval *lval_num( long x ){
-
-  lval *ret = lalloc();
-  ret->tag = LVAL_NUM;
-  ret->num = x;
-  return ret;
-}
-
-lval *lval_err( char *msg ){
-
-  int len = strlen( msg ) + 1;
-  lval *ret = stralloc(len);
-  ret->tag = LVAL_ERR;
-  strncpy( ret->str, msg, len );
-  return ret;
-}
-
-lval *lval_sym( char *contents ){
-
-  int len = strlen( contents ) + 1;
-  lval *ret = stralloc( len );
-  ret->tag = LVAL_SYM;
-  strncpy( ret->str, contents, len );
-  return ret;
-}
-
-lval *lval_sxpr( ){
-
-  lval *ret = lalloc();
-  ret->tag = LVAL_SXPR;
-  return ret;
-}
-lval *lval_qxpr( ){
-
-  lval *ret = lalloc();
-  ret->tag = LVAL_QXPR;
-  return ret;
-}
 
 void ldrop( lval *ptr ){
 
@@ -243,46 +202,6 @@ void ldrop( lval *ptr ){
   }
 
   assert( false /*Where did you get that pointer? Not from here*/);
-}
-
-void add_builtin( lenv *env, const char *sym, lbuiltin *function ){
-
-  lval *symbol = search_env( env, sym );
-  if( symbol->tag != LVAL_ERR ){
-    if( symbol->tag == LVAL_FN ){
-
-      ldrop( symbol->asoc );
-      symbol->asoc = NULL;
-    }
-
-  }else{
-
-    size_t len = strlen( sym ) + 1;
-    ldrop( symbol );
-    symbol = stralloc( len );
-    strncpy( symbol->str, sym, len );
-  }
-
-  symbol->tag = LVAL_BUILTIN;
-  symbol->fun = function;
-
-  lval_push( &env->data, symbol );
-}
-
-lval *search_env( lenv *env, const char *sym ){
-
-  lval *curr = env->data;
-
-  while( curr != NULL ){
-
-    if( strcmp( curr->str, sym ) ){
-      return curr;
-    }
-    curr = curr->next;
-  }
-  char err[256];
-  sprintf( err, "Symbol \"%s\" not bound in this environment", sym );
-  return lval_err( err );
 }
 
 void lval_cleanup(){
