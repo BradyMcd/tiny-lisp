@@ -54,21 +54,6 @@ static struct lmgr **lval_manager = NULL;
  *List Manipulation
  */
 
-lval *lval_pop( lval **node ){
-
-  if( *node == NULL ){ return NULL; }
-  lval *ret = *node;
-  *node = (*node)->next;
-  ret->next = NULL;
-  return ret;
-}
-void lval_push( lval **node, lval *new ){
-
-  assert( node != NULL );
-  assert( new != NULL);
-  new->next = *node;
-  *node = new;
-}
 
 /**
  *Memory Operations

@@ -21,6 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <assert.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -130,6 +131,23 @@ lval *lval_qxpr( ){
   lval *ret = lalloc();
   ret->tag = LVAL_QXPR;
   return ret;
+}
+
+lval *lval_pop( lval **node ){
+
+  if( *node == NULL ){ return NULL; }
+  lval *ret = *node;
+  *node = (*node)->next;
+  ret->next = NULL;
+  return ret;
+}
+
+void lval_push( lval **node, lval *new ){
+
+  assert( node != NULL );
+  assert( new != NULL);
+  new->next = *node;
+  *node = new;
 }
 
 void _lval_add( lval **node, lval *new ){

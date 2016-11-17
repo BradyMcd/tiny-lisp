@@ -8,9 +8,6 @@
 #define INIT_SIZE 4096
 #define INIT_CHAR 8192
 
-lval* lval_pop( lval** );
-void lval_push( lval**, lval* );
-
 lval *lalloc();
 lval *stralloc( size_t );
 
