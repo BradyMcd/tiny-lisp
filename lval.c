@@ -29,26 +29,33 @@
 #include <memory.h>
 #include <lval.h>
 
-bool lval_type_eq( lval *a, lval *b ){
+enum TAG lval_get_type( lval* a ){
+  return a->tag;
+}
 
-  if( a == NULL ){
-    if( b == NULL ){
-      return true;
-    }else{
-      return false;
-    }
-  }
-  if( a->tag == b->tag ){
+bool lval_is_type( lval* a, enum TAG type ){
+  assert( a != NULL );
+
+  if( a->tag == type ){
     return true;
   }
+
   return false;
+}
+
+bool lval_type_eq( lval *a, lval *b ){
+  assert( a != NULL );
+  assert( b != NULL );
+
+  return lval_is_type( a, b->tag );
 }
 
 bool lval_expr_eq( lval *a, lval *b );
 bool lval_eq( lval *a, lval *b ){
+  assert( a != NULL );
+  assert( b != NULL );
 
   if( lval_type_eq( a, b ) ){
-    if( a == NULL ){ return true; }
     switch( a->tag ){
     case LVAL_SYM:
       if( a->num == b->num ){
@@ -67,6 +74,7 @@ bool lval_eq( lval *a, lval *b ){
       break;
     case LVAL_SXPR:
     case LVAL_QXPR:
+      if( a->asoc == NULL || b->asoc == NULL ){ return false; }
       return lval_expr_eq( a->asoc, b->asoc );
       break;
     default:
@@ -80,12 +88,14 @@ bool lval_eq( lval *a, lval *b ){
 }
 
 bool lval_expr_eq( lval *a, lval *b ){
+  assert( a != NULL );
+  assert( b != NULL );
 
   bool rv = true;
   lval *al = a;
   lval *be = b;
 
-  while( rv && al != NULL ){
+  while( rv && al != NULL && be != NULL ){
 
     rv = lval_eq( al, be );
     al = al->next;

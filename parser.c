@@ -121,7 +121,7 @@ int _lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node ){
     WRITE_BUFFER( loc, left, od )
   }
 
-  switch( node->tag ){
+  switch( lval_get_type( node ) ){
   case LVAL_SXPR:
     _lval_sprint( loc, left, "( ", " )", node->asoc );
     break;
@@ -169,7 +169,7 @@ void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
     fputs( od, stream );
   }
 
-  switch( node->tag ){
+  switch( lval_get_type( node ) ){
   case LVAL_SXPR:
     _lval_fprint( stream, "( ", ")", node->asoc );
     break;
@@ -198,7 +198,7 @@ void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
     fputs( cd, stream );
 }
 void lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
-  if( node->tag == LVAL_SXPR ){
+  if( lval_get_type( node ) == LVAL_SXPR ){
     _lval_fprint( stream, od, cd, node->asoc );
   }else{
     //This is almost definitely the error path

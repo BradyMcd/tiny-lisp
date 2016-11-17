@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #include <lval_type.h>
 
+enum TAG lval_get_type( lval* );
+bool lval_is_type( lval*, enum TAG );
+
 bool lval_type_eq( lval*, lval* );
 bool lval_eq( lval*, lval* );
 bool lval_expr_eq( lval*, lval* );
