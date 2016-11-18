@@ -19,7 +19,7 @@ lval *lval_sxpr();
 lval *lval_qxpr();
 
 void _lval_add( lval**, lval* );
-lval* lval_pop( lval** );
+lval *lval_pop( lval** );
 void lval_push( lval**, lval* );
 
 lval *lval_cp( lval* );
