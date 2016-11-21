@@ -85,10 +85,11 @@ lval *_read_ast( mpc_ast_t *node ){
     case '}' : { continue; }
     default : {
 
-      if( strcmp( node->children[i]->tag, "regex" ) == 0 )
+      if( strcmp( node->children[i]->tag, "regex" ) == 0 ){
         continue;
-      else
-        _lval_add( &ret->asoc, _read_ast( node->children[i] ) );
+      }else{
+        lval_expr_add( ret, _read_ast( node->children[i] ) );
+      }
     }
     }
   }
@@ -98,7 +99,6 @@ lval *_read_ast( mpc_ast_t *node ){
 /*
  *Eval step
  */
-
 
 /*
  *Printing Lisp values
@@ -121,28 +121,29 @@ int _lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node ){
     WRITE_BUFFER( loc, left, od )
   }
 
-  switch( lval_get_type( node ) ){
+  switch( lval_type_of( node ) ){
   case LVAL_SXPR:
-    _lval_sprint( loc, left, "( ", " )", node->asoc );
+    _lval_sprint( loc, left, "( ", " )", lval_asoc_of( node ) );
     break;
   case LVAL_QXPR:
-    _lval_sprint( loc, left, "{ ", "}", node->asoc );
+    _lval_sprint( loc, left, "{ ", "}", lval_asoc_of( node ) );
     break;
   case LVAL_NUM:
-    sprintf( buff, "%li ", node->num );
+    sprintf( buff, "%li ", lval_num_of( node ) );
     WRITE_BUFFER( loc, left, buff )
     break;
   case LVAL_SYM:
-    WRITE_BUFFER( loc, left, node->str )
+    WRITE_BUFFER( loc, left, lval_sym_of( node ) )
     WRITE_BUFFER( loc, left, " " )
     break;
   case LVAL_ERR:
     /*This is technically a much different code path,
      *I'll probably split these print functions in 3 when environment works*/
-    WRITE_BUFFER( loc, left, node->str )
+    WRITE_BUFFER( loc, left, lval_sym_of( node ) )
     break;
   default:
-    fprintf( stderr, "Somehow, something went wrong. Tag: %i", node->tag );
+    fprintf( stderr, "Somehow, something went wrong. Tag: %i",
+             lval_type_of( node) );
     return 1;
     break;
   }
@@ -169,26 +170,27 @@ void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
     fputs( od, stream );
   }
 
-  switch( lval_get_type( node ) ){
+  switch( lval_type_of( node ) ){
   case LVAL_SXPR:
-    _lval_fprint( stream, "( ", ")", node->asoc );
+    _lval_fprint( stream, "( ", ")", lval_asoc_of( node ) );
     break;
   case LVAL_QXPR:
-    _lval_fprint( stream, "{ ", "}", node->asoc );
+    _lval_fprint( stream, "{ ", "}", lval_asoc_of( node ) );
     break;
   case LVAL_NUM:
-    fprintf( stream, "%li ", node->num );
+    fprintf( stream, "%li ", lval_num_of( node ) );
     break;
   case LVAL_SYM:
-    fprintf( stream, "%s ", node->str );
+    fprintf( stream, "%s ", lval_sym_of( node ) );
     break;
   case LVAL_ERR:
     /*Again, in states where an error is present things should be very
       different. This wants a rewrite after environment and error handling*/
-    fprintf( stream, "Error: %s", node->str );
+    fprintf( stream, "Error: %s", lval_sym_of( node ) );
     break;
   default:
-    fprintf( stderr, "Somehow, something went wrong. Tag: %i", node->tag );
+    fprintf( stderr, "Somehow, something went wrong. Tag: %i",
+             lval_type_of( node ) );
   }
 
   if( node->next != NULL )
@@ -198,8 +200,8 @@ void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
     fputs( cd, stream );
 }
 void lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
-  if( lval_get_type( node ) == LVAL_SXPR ){
-    _lval_fprint( stream, od, cd, node->asoc );
+  if( lval_type_of( node ) == LVAL_SXPR ){
+    _lval_fprint( stream, od, cd, lval_asoc_of( node ) );
   }else{
     //This is almost definitely the error path
     _lval_fprint( stream, od, cd, node );

@@ -26,10 +26,11 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <lval_type.h>
 #include <memory.h>
 #include <lval.h>
 
-enum TAG lval_get_type( lval* a ){
+enum TAG lval_type_of( lval* a ){
   return a->tag;
 }
 
@@ -58,6 +59,8 @@ bool lval_eq( lval *a, lval *b ){
   if( lval_type_eq( a, b ) ){
     switch( a->tag ){
     case LVAL_SYM:
+    case LVAL_BUILTIN:
+    case LVAL_FN:
       if( a->num == b->num ){
 
         return strncmp( a->str, b->str, a->num );
@@ -143,6 +146,61 @@ lval *lval_qxpr( ){
   return ret;
 }
 
+long lval_num_of( lval *node ){
+
+  switch( node->tag ){
+  case LVAL_NUM:
+  case LVAL_SYM:
+  case LVAL_ERR:
+    return node->num;
+  default:
+    fprintf( stderr, "Trying to reach a number which does not exist" );
+  }
+  return 0;
+}
+
+char *lval_sym_of( lval *node ){
+
+  switch( node->tag ){
+  case LVAL_SYM:
+  case LVAL_ERR:
+  case LVAL_FN:
+  case LVAL_BUILTIN:
+    return node->str;
+  default:
+    fprintf( stderr, "Trying to reach a symbol which does not exist" );
+  }
+  return NULL;
+}
+
+lval *lval_asoc_of( lval *node ){
+
+  switch( node->tag ){
+  case LVAL_SXPR:
+  case LVAL_QXPR:
+  case LVAL_FN:
+  case LVAL_VAR:
+    return node->asoc;
+  default:
+    fprintf( stderr, "Trying to reach an asoc slot which does not exist" );
+  }
+  return NULL;
+}
+
+lval *lval_next_of( lval *node ){
+
+  return node->next;
+}
+
+lbuiltin lval_call( lval *fn ){
+
+  if( lval_type_of( fn ) == LVAL_BUILTIN )
+    return fn->fun;
+
+  fprintf( stderr, "Attempted to call a non-funtion" );
+  return NULL;
+}
+
 lval *lval_pop( lval **node ){
 
   if( *node == NULL ){ return NULL; }
@@ -169,6 +227,11 @@ void _lval_add( lval **node, lval *new ){
   }
 
   _lval_add( &((*node)->next), new );
+}
+
+void lval_expr_add( lval *node, lval *new ){
+
+  _lval_add( &node->asoc, new );
 }
 
 lval *lval_cp_expr( lval *node );
@@ -216,28 +279,33 @@ lval *lval_cp_expr( lval* node ){
 }
 
 lval *search_env( lenv*, const char* );
-void add_builtin( lenv *env, const char *sym, lbuiltin *function ){
+lval *add_builtin( lenv *env, const char *sym, lbuiltin function ){
 
   lval *symbol = search_env( env, sym );
+  lval *rv;
   if( symbol->tag != LVAL_ERR ){
     if( symbol->tag == LVAL_FN ){
 
       ldrop( symbol->asoc );
       symbol->asoc = NULL;
     }
-
+    char *msg = "Warning: Symbol previously bound";
+    rv = lval_err( msg );
   }else{
 
     size_t len = strlen( sym ) + 1;
     ldrop( symbol );
     symbol = stralloc( len );
     strncpy( symbol->str, sym, len );
+    rv = symbol;
   }
 
   symbol->tag = LVAL_BUILTIN;
   symbol->fun = function;
 
   lval_push( &env->data, symbol );
+
+  return symbol;
 }
 
 lval *search_env( lenv *env, const char *sym ){

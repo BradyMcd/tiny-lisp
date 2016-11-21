@@ -30,7 +30,7 @@ typedef struct lval{
   char* str;
 
   struct lval* asoc;
-  lbuiltin* fun;
+  lbuiltin fun;
 
   struct lval* next;
 }lval;

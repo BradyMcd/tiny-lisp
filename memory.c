@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <lval_type.h>
 #include <lval.h>
 #include <memory.h>
 
