@@ -192,6 +192,22 @@ lval *lval_next_of( lval *node ){
   return node->next;
 }
 
+lval *lval_take_asoc( lval *node ){
+  lval *asoc = node->asoc;
+
+  node->asoc = NULL;
+
+  return asoc;
+}
+
+lval *lval_take_next( lval *node ){
+  lval *next = node->next;
+
+  node->next = NULL;
+
+  return next;
+}
+
 lbuiltin lval_call( lval *fn ){
 
   if( lval_type_of( fn ) == LVAL_BUILTIN )

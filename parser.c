@@ -100,6 +100,73 @@ lval *_read_ast( mpc_ast_t *node ){
  *Eval step
  */
 
+lval *eval_expr( lenv *env, lval *n ){
+  if( n == NULL ){ return NULL; }
+
+  lval *node = n;
+  lval *work;
+  lval *tail;
+  lval *next = eval_expr( env, lval_take_next( node ) );
+
+  if( lval_is_type( next, LVAL_ERR ) ){
+    ldrop( node );
+    return next;
+  }
+
+  switch( lval_type_of( node ) ){
+  case LVAL_SXPR:
+
+    work = eval_expr( env, lval_take_asoc( node ) );
+    ldrop( node ); node = work;
+    if( lval_is_type( node, LVAL_SYM ) ){
+
+      work = search_env( env, lval_sym_of( node ) );
+      switch( lval_type_of( work ) ){
+      case LVAL_FN:
+
+        break;
+      case LVAL_BUILTIN:
+
+        tail = lval_take_next( node );
+        ldrop( node );
+        node = lval_call( work )( env, tail );
+        lval_push( &node, next );
+        //tail should probably have resolved to NULL here
+        return node;
+        break;
+      case LVAL_VAR:
+
+        node = lval_cp_expr( lval_asoc_of( work ) );
+        lval_push( &node, next );
+        return node;
+        break;
+      case LVAL_ERR:
+
+        if( next != NULL ){ ldrop( next ); }
+        ldrop( node );
+        return work;
+        break;
+      default:
+        //Should be unreachable
+        break;
+      }
+    }else{
+
+      return node;
+    }
+    break;
+  case LVAL_QXPR:
+  case LVAL_SYM:
+  case LVAL_NUM:
+    lval_push( &node, next );
+    return node;
+    break;
+  default:
+    return lval_err( "I can't imagine how you might get here. Until I get here of course and step through in gdb" );
+  }
+  return lval_err( "Again, I imagine this is unreachable, but gdb is quite the imagination enhancer" );
+}
+
 /*
  *Printing Lisp values
  */
@@ -152,8 +219,8 @@ int _lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node ){
     WRITE_BUFFER( loc, left, cd )
   }
 
-  if( node->next != NULL )
-    return lval_sprint( loc, left, NULL, NULL, node->next );
+  if( lval_next_of( node ) != NULL )
+    return lval_sprint( loc, left, NULL, NULL, lval_next_of( node ) );
 
   return 0;
 }
@@ -193,8 +260,8 @@ void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
              lval_type_of( node ) );
   }
 
-  if( node->next != NULL )
-    _lval_fprint( stream, NULL, NULL, node->next );
+  if( lval_next_of( node ) != NULL )
+    _lval_fprint( stream, NULL, NULL, lval_next_of( node ) );
 
   if( cd != NULL )
     fputs( cd, stream );

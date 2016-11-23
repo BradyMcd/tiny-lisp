@@ -3,7 +3,8 @@
 #define _MEMORY_H
 
 #include <stddef.h>
-#include <lval_type.h>
+
+typedef struct lval lval;
 
 #define INIT_SIZE 4096
 #define INIT_CHAR 8192
