@@ -30,7 +30,7 @@ bool lval_expr_eq( lval*, lval* );
 
 lval *lval_num( long );
 lval *lval_err( char* );
-lval *lval_sym( char* );
+lval *lval_sym( const char* );
 lval *lval_sxpr();
 lval *lval_qxpr();
 
@@ -47,10 +47,12 @@ lbuiltin lval_call( lval* );
 lval *lval_pop( lval** );
 void lval_push( lval**, lval* );
 void lval_expr_add( lval*, lval* );
+void lval_cat( lval*, lval* );
 
 lval *lval_cp( lval* );
 lval *lval_cp_expr( lval* );
 
+lenv *init_env( );
 lval *add_builtin( lenv*, const char*, lbuiltin );
 lval *search_env( lenv*, const char* );
 

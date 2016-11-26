@@ -108,7 +108,7 @@ lval *eval_expr( lenv *env, lval *n ){
   lval *tail;
   lval *next = eval_expr( env, lval_take_next( node ) );
 
-  if( lval_is_type( next, LVAL_ERR ) ){
+  if( next != NULL && lval_is_type( next, LVAL_ERR ) ){
     ldrop( node );
     return next;
   }
@@ -130,14 +130,14 @@ lval *eval_expr( lenv *env, lval *n ){
         tail = lval_take_next( node );
         ldrop( node );
         node = lval_call( work )( env, tail );
-        lval_push( &node, next );
+        if( next!= NULL ){ lval_push( &next, node ); }
         //tail should probably have resolved to NULL here
         return node;
         break;
       case LVAL_VAR:
 
         node = lval_cp_expr( lval_asoc_of( work ) );
-        lval_push( &node, next );
+        if( next!= NULL ){ lval_push( &next, node ); }
         return node;
         break;
       case LVAL_ERR:
@@ -147,7 +147,7 @@ lval *eval_expr( lenv *env, lval *n ){
         return work;
         break;
       default:
-        //Should be unreachable
+        //This should be unreachable. Perhaps I should have different tag types for environment lvals, memory lvals and lvals the language can actually see.
         break;
       }
     }else{
@@ -158,7 +158,7 @@ lval *eval_expr( lenv *env, lval *n ){
   case LVAL_QXPR:
   case LVAL_SYM:
   case LVAL_NUM:
-    lval_push( &node, next );
+    if( next!= NULL ){ lval_push( &next, node ); }
     return node;
     break;
   default:

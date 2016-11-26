@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <lval_type.h>
 #include <memory.h>
@@ -124,7 +125,7 @@ lval *lval_err( char *msg ){
   return ret;
 }
 
-lval *lval_sym( char *contents ){
+lval *lval_sym( const char *contents ){
 
   int len = strlen( contents ) + 1;
   lval *ret = stralloc( len );
@@ -250,6 +251,11 @@ void lval_expr_add( lval *node, lval *new ){
   _lval_add( &node->asoc, new );
 }
 
+void lval_cat( lval *node, lval *new ){
+
+  _lval_add( &node->next, new );
+}
+
 lval *lval_cp_expr( lval *node );
 lval *lval_cp( lval *node ){
   lval *new = NULL;
@@ -294,6 +300,12 @@ lval *lval_cp_expr( lval* node ){
   return new;
 }
 
+lenv *init_env(  ){
+  lenv *rv = malloc( sizeof( lenv ) );
+  rv->data = NULL;
+  return rv;
+}
+
 lval *search_env( lenv*, const char* );
 lval *add_builtin( lenv *env, const char *sym, lbuiltin function ){
 
@@ -308,12 +320,7 @@ lval *add_builtin( lenv *env, const char *sym, lbuiltin function ){
     char *msg = "Warning: Symbol previously bound";
     rv = lval_err( msg );
   }else{
-
-    size_t len = strlen( sym ) + 1;
-    ldrop( symbol );
-    symbol = stralloc( len );
-    strncpy( symbol->str, sym, len );
-    rv = symbol;
+    symbol = lval_sym( sym );
   }
 
   symbol->tag = LVAL_BUILTIN;
@@ -330,7 +337,7 @@ lval *search_env( lenv *env, const char *sym ){
 
   while( curr != NULL ){
 
-    if( strcmp( curr->str, sym ) ){
+    if( strcmp( curr->str, sym ) == 0 ){
       return curr;
     }
     curr = curr->next;

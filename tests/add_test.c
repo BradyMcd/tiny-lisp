@@ -22,32 +22,64 @@
  */
 
 #include <stdio.h>
-#include <stdbool.h>
+#include <malloc.h>
 
+#include <lval.h>
 #include <parser.h>
 
-int test_string( char* str, bool expect ){
-  printf("Reading: %s\n", str);
-  lval* _rv = read_string( "read_test", str );
-  lval_fprint( stdout, NULL, NULL, _rv );
-  printf("\nExpected %s.\n", expect?"matching output":"an error");
 
-  lval_drop( _rv );
-  return 0;
+lval *add( lenv *env, lval *value ){
+
+  if( lval_type_of( value ) != LVAL_NUM ){
+    return lval_err( "Found an invalid value for this implementation of +" );
+  }
+
+  lval *rv;
+
+  if( lval_next_of( value ) != NULL ){
+    lval *next = add( env, lval_take_next( value ) );
+    rv = lval_num( lval_num_of( next ) + lval_num_of( value ) );
+    lval_drop( next );
+  }else{
+    rv = lval_cp( value );
+  }
+  lval_drop( value );
+  return rv;
 }
 
 int main( ){
 
-  int ret = 0;
   parser_init();
-  test_string( "( + 2 3 )", true );
-  test_string( "{ + 2 3 }", true );
 
-  test_string( "{ a abc ss ", false );
-  test_string( "ab 2 2 3 { some a b c }", true );
-  test_string( "- 1 2 )", false );
+  lenv *env = init_env();
+  lval *result;
 
+  result = add_builtin( env, "+", add );
+
+  result = read_string( "add_test", "+ 2 3" );
+  lval_fprint( stdout, NULL, "\n", result );
+  result = eval_expr( env, result );
+  lval_fprint( stdout, NULL, "\n", result );
+  lval_drop( result );
+
+  result = read_string( "add_test", "+ 1 1 1 1" );
+  lval_fprint( stdout, NULL, "\n", result );
+  result = eval_expr( env, result );
+  lval_fprint( stdout, NULL, "\n", result );
+  lval_drop( result );
+
+  result = read_string( "add_test", "(+ 2 3 (+ 3 3))" );
+  lval_fprint( stdout, NULL, "\n", result );
+  result = eval_expr( env, result );
+  lval_fprint( stdout, NULL, "\n", result );
+  lval_drop( result );
+
+  free( env );
+#ifndef VALGRINDING
   parser_mem_cleanup();
+#else
+  parser_cleanup();
+#endif
 
-  return ret;
+  return 0;
 }
