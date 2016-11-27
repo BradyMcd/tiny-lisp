@@ -35,9 +35,14 @@ lval *add( lenv *env, lval *value ){
   }
 
   lval *rv;
-
   if( lval_next_of( value ) != NULL ){
     lval *next = add( env, lval_take_next( value ) );
+
+    if( lval_is_type( next, LVAL_ERR ) ){
+      lval_drop( value );
+      return next;
+    }
+
     rv = lval_num( lval_num_of( next ) + lval_num_of( value ) );
     lval_drop( next );
   }else{
@@ -74,12 +79,14 @@ int main( ){
   lval_fprint( stdout, NULL, "\n", result );
   lval_drop( result );
 
+  result = read_string( "add_test", "(+ 1 NaN)"  );
+  lval_fprint( stdout, "\n", "\n", result );
+  result = eval_expr( env, result );
+  lval_fprint( stdout, NULL, "\n", result );
+  lval_drop( result );
+
   free( env );
-#ifndef VALGRINDING
   parser_mem_cleanup();
-#else
-  parser_cleanup();
-#endif
 
   return 0;
 }
