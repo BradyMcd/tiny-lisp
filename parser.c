@@ -127,12 +127,12 @@ lval *eval_expr( lenv *env, lval *n ){
         break;
       case LVAL_BUILTIN:
 
-        tail = lval_take_next( node );
+        tail = eval_expr( env, lval_take_next( node ) );
         ldrop( node );
         node = lval_call( work )( env, tail );
         if( next!= NULL ){ lval_push( &next, node ); }
         //tail should probably have resolved to NULL here
-        return node;
+        return node == NULL?lval_nil():node;
         break;
       case LVAL_VAR:
 
@@ -249,6 +249,9 @@ void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
     break;
   case LVAL_SYM:
     fprintf( stream, "%s ", lval_sym_of( node ) );
+    break;
+  case LVAL_NIL:
+    fprintf( stream, "nil " );
     break;
   case LVAL_ERR:
     /*Again, in states where an error is present things should be very

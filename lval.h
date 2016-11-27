@@ -33,6 +33,7 @@ lval *lval_err( char* );
 lval *lval_sym( const char* );
 lval *lval_sxpr();
 lval *lval_qxpr();
+lval *lval_nil();
 
 long lval_num_of( lval* );
 char *lval_sym_of( lval* );

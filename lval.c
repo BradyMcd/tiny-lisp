@@ -32,16 +32,12 @@
 #include <lval.h>
 
 enum TAG lval_type_of( lval* a ){
+  if( a == NULL ){ return LVAL_NIL; }
   return a->tag;
 }
 
 bool lval_is_type( lval* a, enum TAG type ){
-  assert( a != NULL );
-
-  if( a->tag == type ){
-    return true;
-  }
-
+  if( lval_type_of( a ) == type ){ return true; }
   return false;
 }
 
@@ -144,6 +140,13 @@ lval *lval_qxpr( ){
 
   lval *ret = lalloc();
   ret->tag = LVAL_QXPR;
+  return ret;
+}
+
+lval *lval_nil(){
+
+  lval *ret = lalloc();
+  ret->tag = LVAL_NIL;
   return ret;
 }
 
