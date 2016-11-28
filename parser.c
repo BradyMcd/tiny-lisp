@@ -30,6 +30,7 @@
 
 #include <memory.h>
 #include <lval.h>
+#include <environment.h>
 #include <parser.h>
 
 static mpc_parser_t *Num;

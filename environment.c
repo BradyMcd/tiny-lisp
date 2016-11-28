@@ -21,47 +21,68 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <stdio.h>
 #include <malloc.h>
+#include <string.h>
 
+#include <memory.h>
+#include <lval_type.h>
 #include <lval.h>
-#include <environment.h>
-#include <parser.h>
 
-BI_BB_START( ladd, lval_num( 0 ) )
-BI_BB_BODY( LVAL_NUM, {
-  rv = lval_num( lval_num_of( temp ) + lval_num_of( curr ) );
-  lval_drop( temp ); temp = rv;
-} )
-BI_BB_END( ladd )
+lval *search_env( lenv*, const char* );
+lval *add_builtin( lenv *env, const char *sym, lbuiltin function ){
 
-void eval_test( lenv* env, const char *string ){
+  lval *symbol = search_env( env, sym );
+  lval *rv;
+  if( symbol->tag != LVAL_ERR ){
+    if( symbol->tag == LVAL_FN ){
 
-  lval *result = read_string( "eval_test", string );
-  lval_fprint( stdout, NULL, "\n", result );
-  result = eval_expr( env, result );
-  lval_fprint( stdout, NULL, "\n", result );
-  lval_drop( result );
+      ldrop( symbol->asoc );
+      symbol->asoc = NULL;
+    }
+    rv = lval_err( "Warning: Symbol previously bound");
+  }else{
+    symbol = lval_sym( sym );
+  }
+
+  symbol->tag = LVAL_BUILTIN;
+  symbol->fun = function;
+
+  lval_push( &env->data, symbol );
+
+  return symbol;
 }
 
-int main( ){
+lval *search_env( lenv *env, const char *sym ){
 
-  parser_init();
+  lval *curr = env->data;
 
-  lenv *env = new_env( NULL );
+  while( curr != NULL ){
 
-  add_builtin( env, "+", ladd );
+    if( strcmp( curr->str, sym ) == 0 ){
+      return curr;
+    }
+    curr = curr->next;
+  }
+  char err[256];
+  sprintf( err, "Symbol \"%s\" not bound in this environment", sym );
+  return lval_err( err );
+}
 
-  eval_test( env, "(+ 3 4)" );
-  eval_test( env, "(+ 1 1 1 1 1)" );
-  eval_test( env, "{+ 1 2(+ 2 3)}" );
-  eval_test( env, "(+ (+ 3 4) (+ 6 7) 2)" );
-  eval_test( env, "(+ 1)" );
-  eval_test( env, "(+)" );
-  eval_test( env, "(+ 2 NaN)" );
+lenv *new_env( lenv *ptr ){
 
-  delete_env( env );
-  parser_mem_cleanup();
+  lenv *new = malloc( sizeof( lenv ) );
+  if( ptr != NULL ){
+    new->parent = ptr;
+  }else{
+    new->parent = NULL;
+  }
+  new->data = NULL;
+  return new;
+}
 
-  return 0;
+lenv *delete_env( lenv *ptr ){
+  lenv *rv = ptr->parent;
+  ldrop( ptr->data );
+  free( ptr );
+  return rv;
 }

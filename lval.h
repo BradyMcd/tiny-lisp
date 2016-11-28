@@ -53,8 +53,4 @@ void lval_cat( lval*, lval* );
 lval *lval_cp( lval* );
 lval *lval_cp_expr( lval* );
 
-lenv *init_env( );
-lval *add_builtin( lenv*, const char*, lbuiltin );
-lval *search_env( lenv*, const char* );
-
 #endif//_LVAL_H

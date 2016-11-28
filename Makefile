@@ -1,6 +1,6 @@
 CC = clang
 FLAGS = -Wall -Wextra -g
-OBJECTS = memory.o parser.o lval.o
+OBJECTS = memory.o parser.o lval.o environment.o
 SRC = $(OBJECTS:.o=.c)
 CDIR = $(shell pwd)
 INCLUDE = -I$(CDIR)

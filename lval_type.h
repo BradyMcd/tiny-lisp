@@ -4,7 +4,8 @@
 
 typedef struct lval lval;
 typedef struct lenv{
-  lval* data;
+  lval *data;
+  struct lenv *parent;
 }lenv;
 
 typedef lval*(*lbuiltin)(lenv*, lval*);
@@ -14,12 +15,12 @@ typedef struct lval{
   int tag;
 
   long num;
-  char* str;
+  char *str;
 
-  struct lval* asoc;
+  struct lval *asoc;
   lbuiltin fun;
 
-  struct lval* next;
+  struct lval *next;
 }lval;
 
 #endif//_LVAL_TYPE_H
