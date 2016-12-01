@@ -52,16 +52,21 @@ lval *add_builtin( lenv *env, const char *sym, lbuiltin function ){
   return symbol;
 }
 
-lval *search_env( lenv *env, const char *sym ){
+lval *search_env( lenv *e, const char *sym ){
 
+  lenv *env = e;
   lval *curr = env->data;
 
-  while( curr != NULL ){
+  while( env != NULL ){
+    while( curr != NULL ){
 
-    if( strcmp( curr->str, sym ) == 0 ){
-      return curr;
+      if( strcmp( curr->str, sym ) == 0 ){
+        return curr;
+      }
+      curr = curr->next;
     }
-    curr = curr->next;
+    env = env->parent;
+    curr = env->data;
   }
   char err[256];
   sprintf( err, "Symbol \"%s\" not bound in this environment", sym );
@@ -71,11 +76,7 @@ lval *search_env( lenv *env, const char *sym ){
 lenv *new_env( lenv *ptr ){
 
   lenv *new = malloc( sizeof( lenv ) );
-  if( ptr != NULL ){
-    new->parent = ptr;
-  }else{
-    new->parent = NULL;
-  }
+  new->parent = ptr;
   new->data = NULL;
   return new;
 }
