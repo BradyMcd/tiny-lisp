@@ -55,9 +55,10 @@ lval *add_builtin( lenv *env, const char *sym, lbuiltin function ){
 lval *search_env( lenv *e, const char *sym ){
 
   lenv *env = e;
-  lval *curr = env->data;
+  lval *curr;
 
   while( env != NULL ){
+    curr = env->data;
     while( curr != NULL ){
 
       if( strcmp( curr->str, sym ) == 0 ){
@@ -66,7 +67,6 @@ lval *search_env( lenv *e, const char *sym ){
       curr = curr->next;
     }
     env = env->parent;
-    curr = env->data;
   }
   char err[256];
   sprintf( err, "Symbol \"%s\" not bound in this environment", sym );
