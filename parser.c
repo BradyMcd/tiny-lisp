@@ -192,10 +192,10 @@ int _lval_sprint( char **loc, size_t *left, char *od, char *cd, lval *node ){
 
   switch( lval_type_of( node ) ){
   case LVAL_SXPR:
-    err += _lval_sprint( loc, left, "( ", ")", lval_asoc_of( node ) );
+    err += _lval_sprint( loc, left, "( ", ") ", lval_asoc_of( node ) );
     break;
   case LVAL_QXPR:
-    err += _lval_sprint( loc, left, "{ ", "}", lval_asoc_of( node ) );
+    err += _lval_sprint( loc, left, "{ ", "} ", lval_asoc_of( node ) );
     break;
   case LVAL_NUM:
     sprintf( buff, "%li ", lval_num_of( node ) );
@@ -247,10 +247,10 @@ void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){
 
   switch( lval_type_of( node ) ){
   case LVAL_SXPR:
-    _lval_fprint( stream, "( ", ")", lval_asoc_of( node ) );
+    _lval_fprint( stream, "( ", ") ", lval_asoc_of( node ) );
     break;
   case LVAL_QXPR:
-    _lval_fprint( stream, "{ ", "}", lval_asoc_of( node ) );
+    _lval_fprint( stream, "{ ", "} ", lval_asoc_of( node ) );
     break;
   case LVAL_NUM:
     fprintf( stream, "%li ", lval_num_of( node ) );
