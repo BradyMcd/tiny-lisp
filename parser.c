@@ -172,42 +172,43 @@ lval *eval_expr( lenv *env, lval *n ){
  *Printing Lisp values
  */
 #define WRITE_BUFFER( LOC, LEFT, SRC )   \
-  { int _strlen = strlen( SRC );        \
-    if( LEFT < _strlen ){               \
-      strncpy( LOC, SRC, _strlen );     \
-      LOC += _strlen;                   \
-      LEFT -= _strlen;                  \
-    }else{ return 1; }}
+  _strlen = strlen( SRC );           \
+  if( LEFT > _strlen ){                  \
+    strncpy( LOC, SRC, _strlen );        \
+    LOC += _strlen;                      \
+    LEFT -= _strlen;                     \
+  }else{ return 1; }
 
-int _lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node ){
+int _lval_sprint( char **loc, size_t *left, char *od, char *cd, lval *node ){
 
   char buff[128];
-  char *loc = dest;
-  int left = n;
+  int err = 0;
+
+  size_t _strlen;
 
   if( od != NULL ){
-    WRITE_BUFFER( loc, left, od )
+    WRITE_BUFFER( *loc, *left, od )
   }
 
   switch( lval_type_of( node ) ){
   case LVAL_SXPR:
-    _lval_sprint( loc, left, "( ", " )", lval_asoc_of( node ) );
+    err += _lval_sprint( loc, left, "( ", ")", lval_asoc_of( node ) );
     break;
   case LVAL_QXPR:
-    _lval_sprint( loc, left, "{ ", "}", lval_asoc_of( node ) );
+    err += _lval_sprint( loc, left, "{ ", "}", lval_asoc_of( node ) );
     break;
   case LVAL_NUM:
     sprintf( buff, "%li ", lval_num_of( node ) );
-    WRITE_BUFFER( loc, left, buff )
+    WRITE_BUFFER( *loc, *left, buff )
     break;
   case LVAL_SYM:
-    WRITE_BUFFER( loc, left, lval_sym_of( node ) )
-    WRITE_BUFFER( loc, left, " " )
+    WRITE_BUFFER( *loc, *left, lval_sym_of( node ) )
+    WRITE_BUFFER( *loc, *left, " " )
     break;
   case LVAL_ERR:
     /*This is technically a much different code path,
      *I'll probably split these print functions in 3 when environment works*/
-    WRITE_BUFFER( loc, left, lval_sym_of( node ) )
+    WRITE_BUFFER( *loc, *left, lval_sym_of( node ) )
     break;
   default:
     fprintf( stderr, "Somehow, something went wrong. Tag: %i",
@@ -216,20 +217,26 @@ int _lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node ){
     break;
   }
 
+  if( lval_next_of( node ) != NULL )
+    err += _lval_sprint( loc, left, NULL, NULL, lval_next_of( node ) );
+
   if( cd != NULL ){
-    WRITE_BUFFER( loc, left, cd )
+    WRITE_BUFFER( *loc, *left, cd )
   }
 
-  if( lval_next_of( node ) != NULL )
-    return lval_sprint( loc, left, NULL, NULL, lval_next_of( node ) );
-
-  return 0;
+  return err;
 }
-/*NOTE: If this function returns 1 it has possibly left the dest string in an
+/*NOTE: If this function returns 1 it has possibly *left the dest string in an
   invalid state*/
 int lval_sprint( char *dest, size_t n, char *od, char *cd, lval *node){
   memset( dest, 0, n );
-  return _lval_sprint( dest, n, od, cd, node );
+  size_t left = n;
+  char *loc = dest;
+  if( lval_is_type( node, LVAL_ERR ) ){
+    return _lval_sprint( &loc, &left, od, cd, node );
+  }
+
+  return _lval_sprint( &loc, &left, od, cd, lval_asoc_of( node ) );
 }
 
 void _lval_fprint( FILE* stream, char *od, char *cd, lval *node ){

@@ -23,14 +23,39 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+#include <assert.h>
 
 #include <parser.h>
 
-int test_string( char* str, bool expect ){
+int test_string( char *str, bool expect ){
+
+  char res[512];
+
   printf("Reading: %s\n", str);
-  lval* _rv = read_string( "read_test", str );
-  lval_fprint( stdout, NULL, NULL, _rv );
-  printf("\nExpected %s.\n", expect?"matching output":"an error");
+
+  lval *_rv = read_string( "read_test", str );
+
+  assert( lval_sprint( res, 512, NULL, NULL, _rv ) == 0 );
+  printf( "%s\n", res );
+  if( lval_is_type( _rv, LVAL_ERR ) ){
+    if( expect == false ){
+      printf( "Expected parsing failure: Passed\n" );
+    }else{
+      printf( "Expected parsing failure: Failed\n" );
+      lval_drop( _rv );
+      return 1;
+    }
+  }else{
+
+    if( strcmp( str, res ) == 0 && expect ){
+      printf( "Expected parsing success: Passed\n" );
+    }else if( expect ){
+      printf( "Expected parsing success: Failed\n" );
+    }else{
+      printf( "Expected to be run in a sane environment ... \n" );
+    }
+  }
 
   lval_drop( _rv );
   return 0;
@@ -39,15 +64,18 @@ int test_string( char* str, bool expect ){
 int main( ){
 
   int ret = 0;
+  const int tests = 5;
   parser_init();
-  test_string( "( + 2 3 )", true );
-  test_string( "{ + 2 3 }", true );
+  ret += test_string( "( + 2 3 )", true );
+  ret += test_string( "{ + 2 3 }", true );
 
-  test_string( "{ a abc ss ", false );
-  test_string( "ab 2 2 3 { some a b c }", true );
-  test_string( "- 1 2 )", false );
+  ret += test_string( "{ a abc ss ", false );
+  ret += test_string( "ab 2 2 3 { some a b c }", true );
+  ret += test_string( "- 1 2 )", false );
 
   parser_mem_cleanup();
 
+
+  printf( "\nTesting reports %i passed tests out of %i\n", tests - ret, tests );
   return ret;
 }
