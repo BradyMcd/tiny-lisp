@@ -6,6 +6,8 @@ takes the parsing technology and the nomenclature. Notably Q-expressions are
 the thing I bring over, denoted by {} Q-expressions are loosly equivalent to 
 LISP macros in that they stop evaluation of whatever is contained within them.
 
+To build tests I suggest 'make -s tests'
+
 # Goals
 
 The goal isn't necessarily to create a REPL (I might implement one though), 

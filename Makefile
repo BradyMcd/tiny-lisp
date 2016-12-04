@@ -10,21 +10,26 @@ DEP = mpc/mpc.o
 all: #Purposefully blank until I make this an actual embeddable module
 
 $(CDIR)/bin/:
+	echo binary directory not found, adding ./bin/
 	mkdir bin
 
-bin/add_test: $(CDIR)/tests/add_test.c $(OBJECTS) $(DEP)
+bin/%:tests/%.c $(OBJECTS) $(DEP)
+	echo Building test: $@ ...
 	$(CC) $(FLAGS) $(OBJECTS) $(DEP) $< -o $@ $(INCLUDE)
-
-bin/read_test: $(CDIR)/tests/read_test.c $(OBJECTS) $(DEP)
-	$(CC) $(FLAGS) $(OBJECTS) $(DEP) $< -o $@ $(INCLUDE)
+	echo  Done
 
 tests: $(CDIR)/bin/ bin/read_test bin/add_test
+	echo All tests built
 
 $(DEP):
+	echo Building dependency: $@ ...
 	$(CC) $(FLAGS) -c mpc/mpc.c -o $@
+	echo  Done
 
 %.o:%.c
+	echo Building module: $@ ...
 	$(CC) $(FLAGS) -c $< -o $@ $(INCLUDE)
+	echo  Done
 
 .PHONY: clean done
 
