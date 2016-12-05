@@ -177,7 +177,7 @@ void ldrop( lval *ptr ){
 
   for( i = 0; i < lval_managers; ++i ){
     if( &lval_manager[i]->buffer[0] <= ptr &&
-        &lval_manager[i]->buffer[INIT_SIZE - 1] > ptr ){
+        &lval_manager[i]->buffer[INIT_SIZE] > ptr ){
       lval_push( &lval_manager[i]->reclaim, ptr );
       return;
     }

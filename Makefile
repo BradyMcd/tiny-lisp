@@ -18,7 +18,7 @@ bin/%:tests/%.c $(OBJECTS) $(DEP)
 	$(CC) $(FLAGS) $(OBJECTS) $(DEP) $< -o $@ $(INCLUDE)
 	echo  Done
 
-tests: $(CDIR)/bin/ bin/read_test bin/add_test
+tests: $(CDIR)/bin/ bin/read_test bin/add_test bin/mem_test
 	echo All tests built
 
 $(DEP):
