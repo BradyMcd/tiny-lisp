@@ -13,12 +13,15 @@ To build tests I suggest 'make -s tests'
 The goal isn't necessarily to create a REPL (I might implement one though), 
 but rather to make an easily embeddable Lisp interpreter for use in larger 
 programs to do things C normally wouldn't pull of comfortably (Read: AI and
-metaprogramming)
+metaprogramming and Greenspun's 10th)
 
 ## Status, By Module
 
 ### Memory
 Currently working, though untested for arbitrarily large loads
+Needs to be decoupled from lval modules in a big way. Currently the overlap
+in function between lval manipulation and memory manipulation is causing
+blockers in progress to the evaluator and environment.
 
 ### Parser
 Reading from strings is currently implemented, I doubt it will change much. 
@@ -27,8 +30,6 @@ invalid expressions.
 
 Printing the structure resulting from the read step is implemented both to
 strings and file pointers
-
-Eval has seen its first pass. Initial tests are promising
 
 ### Lval
 A work in progress, all manipulations of the lval type which aren't directly
@@ -39,9 +40,5 @@ Simple Environment management has been started on; C functions can be bound to
 any valid symbol name.
 
 Environments can now have parent/child relationships. 
-
-Macros (which are probably aweful form) are defined in environment.h to assist
-in making builtin functions. They're only really suitable for simple 
-functionality: simple arithmetic mostly.
 
 In language function binding and variable binding need to be implemented
